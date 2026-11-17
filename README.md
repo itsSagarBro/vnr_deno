@@ -4,9 +4,9 @@ Backend for the E Track offline-first expense **and task** tracker. Built with D
 Mongoose and MongoDB. Provides email/password authentication with HS256 bearer tokens and the
 foundation for expense and task endpoints.
 
-> **Status:** foundation phase. Health checks, bearer-token validation, a protected `/api/auth/me`
-> route and authenticated global search work. Login/register, expense CRUD and task CRUD are
-> documented stubs returning `501 NOT_IMPLEMENTED`.
+> **Status:** health checks, email/password registration and login, bearer-token validation, a
+> protected `/api/auth/me` route and authenticated global search work. Expense CRUD and task CRUD
+> are documented stubs returning `501 NOT_IMPLEMENTED`.
 
 ## Stack
 
@@ -83,7 +83,7 @@ src/
     auth.middleware.ts          # Bearer token validation
     error.middleware.ts         # JSON error envelope
   modules/
-    auth/                       # token service + auth routes
+    auth/                       # User model, scrypt passwords, token service + routes
     expenses/                   # Mongoose schema + protected routes
     tasks/                      # Mongoose schema + protected routes
     search/                     # global search across expenses + tasks
@@ -91,6 +91,22 @@ src/
   types/app-env.ts              # Hono context typings
 main_test.ts                    # health/auth/404 tests
 ```
+
+### Authentication
+
+```bash
+curl -X POST http://localhost:8000/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com","password":"secret123","name":"Asha"}'
+
+curl -X POST http://localhost:8000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com","password":"secret123"}'
+```
+
+Both return `{ "token": "...", "user": { "id": "...", "email": "..." } }`. Passwords are hashed with
+scrypt; only the hash is stored. Use the token as `Authorization: Bearer <token>` on protected
+routes.
 
 ### Global search
 

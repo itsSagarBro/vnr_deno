@@ -9,6 +9,7 @@ import { expenseRoutes } from "./modules/expenses/expenses.routes.ts";
 import { taskRoutes } from "./modules/tasks/tasks.routes.ts";
 import { searchRoutes } from "./modules/search/search.routes.ts";
 import { globalSearch, type SearchService } from "./modules/search/search.service.ts";
+import type { UserService } from "./modules/auth/user.service.ts";
 import type { AppEnv } from "./types/app-env.ts";
 
 export interface AppOptions {
@@ -16,6 +17,7 @@ export interface AppOptions {
   jwtExpiresIn?: string;
   corsOrigin?: string;
   searchService?: SearchService;
+  userService?: UserService;
 }
 
 /// Builds the Hono app without touching the network or database, which keeps
@@ -55,6 +57,7 @@ export function createApp(options: AppOptions) {
     authRoutes({
       jwtSecret: options.jwtSecret,
       jwtExpiresIn: options.jwtExpiresIn,
+      userService: options.userService,
     }),
   );
   app.route("/api/expenses", expenseRoutes(requireJwt));

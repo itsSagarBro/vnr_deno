@@ -12,9 +12,9 @@ Instructions for AI agents and contributors working in this repository.
 
 ## Current phase
 
-Foundation only. Hono app factory, env validation, Mongo connection, bearer middleware, token
-service, health check, authenticated global search and protected stubs exist. Login, registration,
-expense CRUD and task CRUD are intentionally `501 NOT_IMPLEMENTED`.
+Hono app factory, env validation, Mongo connection, bearer middleware, token service, health check,
+authenticated global search and protected stubs exist. Registration and login are implemented with
+scrypt-hashed passwords. Expense CRUD and task CRUD remain intentionally `501 NOT_IMPLEMENTED`.
 
 ## Rules
 
@@ -40,6 +40,9 @@ expense CRUD and task CRUD are intentionally `501 NOT_IMPLEMENTED`.
     third-party typings.
 11. Global search must stay scoped to `c.get("auth").sub` and escape regex input. Keep it injectable
     via `AppOptions.searchService` so route tests do not need MongoDB.
+12. Auth routes must hash with `hashPassword()` and compare with `verifyPassword()` from
+    `src/modules/auth/password.service.ts`. Keep `UserService` injectable via
+    `AppOptions.userService` so route tests do not need MongoDB.
 
 ## Commands
 

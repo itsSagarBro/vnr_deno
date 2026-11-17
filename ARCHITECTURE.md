@@ -31,6 +31,9 @@ src/
     auth/
       auth.service.ts         signAccessToken / verifyAccessToken
       auth.routes.ts          register, login, me
+      password.service.ts     scrypt hashing + constant-time verification
+      user.model.ts           Mongoose User schema (passwordHash only)
+      user.service.ts         injectable user lookup/creation
     expenses/
       expense.model.ts        Mongoose schema
       expenses.routes.ts      protected CRUD stubs
@@ -63,14 +66,19 @@ src/
 
 ## Authentication design
 
-- Credentials: email + password (register/login endpoints are planned).
+- Credentials: email + password. `POST /api/auth/register` and `/api/auth/login` return
+  `{ token, user }`.
+- Passwords: scrypt with a random 16-byte salt, stored as `scrypt$<salt>$<hash>`. Verification uses
+  a constant-time compare; plaintext never leaves the request.
+- User store: `UserService` is injected via `AppOptions.userService`, with `mongoUserService` as the
+  default. Route tests use an in-memory implementation.
 - Tokens: HS256 JWT signed with `JWT_SECRET` via `jose`.
 - Claims: `sub` (user id), `email`, `iss=e-track-api`, `aud=e-track-app`, `iat`, `exp`.
 - Validation: `Authorization: Bearer <token>`; the middleware verifies signature, algorithm, issuer,
   audience and expiry, then stores claims in the Hono context.
 - Client storage: the Flutter app keeps the token in `flutter_secure_storage` and sends it on every
   protected request.
-- Passwords must be hashed (e.g. argon2/scrypt) in phase 2; never store or log plaintext passwords.
+- Never store or log plaintext passwords; only the scrypt hash from `password.service.ts`.
 
 ## Offline-first considerations
 

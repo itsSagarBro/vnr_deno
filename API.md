@@ -30,8 +30,8 @@ Invalid, missing or expired tokens return `401`.
 | Method  | Path                 | Auth | Status      | Description                             |
 | ------- | -------------------- | ---- | ----------- | --------------------------------------- |
 | `GET`   | `/api/health`        | no   | implemented | Service status and timestamp            |
-| `POST`  | `/api/auth/register` | no   | 501 stub    | Create account with email/password      |
-| `POST`  | `/api/auth/login`    | no   | 501 stub    | Verify credentials, issue bearer token  |
+| `POST`  | `/api/auth/register` | no   | implemented | Create account with email/password      |
+| `POST`  | `/api/auth/login`    | no   | implemented | Verify credentials, issue bearer token  |
 | `GET`   | `/api/auth/me`       | yes  | implemented | Return current user identity from token |
 | `GET`   | `/api/expenses`      | yes  | 501 stub    | List expenses for current user          |
 | `POST`  | `/api/expenses`      | yes  | 501 stub    | Create an expense                       |
@@ -54,7 +54,22 @@ Response:
 { "id": "user-123", "email": "user@example.com" }
 ```
 
-### Planned POST /api/auth/login
+### POST /api/auth/register
+
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "correct-horse-battery-staple",
+  "name": "Asha"
+}
+```
+
+`name` is optional. Emails are trimmed and lowercased; passwords need at least 6 characters. A
+duplicate email returns `409 CONFLICT`.
+
+### POST /api/auth/login
 
 Request:
 
@@ -62,7 +77,7 @@ Request:
 { "email": "user@example.com", "password": "correct-horse-battery-staple" }
 ```
 
-Planned response:
+Both auth endpoints return:
 
 ```json
 {
@@ -71,8 +86,9 @@ Planned response:
 }
 ```
 
-The Flutter client stores `token` in `flutter_secure_storage` and reads `user` into its domain
-`AppUser` entity.
+A wrong email or password returns `401 INVALID_CREDENTIALS`. Passwords are hashed with scrypt; only
+the hash is stored. The Flutter client stores `token` in `flutter_secure_storage` and reads `user`
+into its domain `AppUser` entity.
 
 ### Planned POST /api/expenses
 
@@ -149,15 +165,15 @@ newest-first across both collections.
 
 ## Status codes
 
-| Code  | Meaning                                           |
-| ----- | ------------------------------------------------- |
-| `200` | Success                                           |
-| `400` | Validation failure                                |
-| `401` | Missing/invalid/expired bearer token              |
-| `404` | Unknown route                                     |
-| `409` | Conflict, e.g. email already registered (planned) |
-| `500` | Unexpected server error                           |
-| `501` | Endpoint scaffolded but not implemented yet       |
+| Code  | Meaning                                          |
+| ----- | ------------------------------------------------ |
+| `200` | Success                                          |
+| `400` | Validation failure                               |
+| `401` | Missing/invalid/expired token or bad credentials |
+| `404` | Unknown route                                    |
+| `409` | Conflict, e.g. email already registered          |
+| `500` | Unexpected server error                          |
+| `501` | Endpoint scaffolded but not implemented yet      |
 
 ## Error codes
 
@@ -166,6 +182,8 @@ newest-first across both collections.
 | `UNAUTHORIZED`          | No credentials supplied         |
 | `TOKEN_INVALID`         | Bearer token invalid or expired |
 | `VALIDATION_ERROR`      | Request body/query invalid      |
+| `INVALID_CREDENTIALS`   | Wrong email or password         |
+| `CONFLICT`              | Email already registered        |
 | `NOT_FOUND`             | Route/resource not found        |
 | `NOT_IMPLEMENTED`       | Planned endpoint not built yet  |
 | `INTERNAL_SERVER_ERROR` | Unhandled server error          |

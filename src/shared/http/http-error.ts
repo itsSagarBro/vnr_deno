@@ -16,6 +16,14 @@ export function badRequest(message: string, details?: unknown): HttpError {
   return new HttpError(400, message, "VALIDATION_ERROR", details);
 }
 
+export function unauthorized(message: string, code = "UNAUTHORIZED"): HttpError {
+  return new HttpError(401, message, code);
+}
+
+export function conflict(message: string, details?: unknown): HttpError {
+  return new HttpError(409, message, "CONFLICT", details);
+}
+
 export function notImplemented(feature: string): HttpError {
   return new HttpError(
     501,

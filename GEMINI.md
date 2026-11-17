@@ -9,11 +9,12 @@ source of truth for stack, structure and conventions.
 - HTTP: Hono app factory in `src/app.ts`; entrypoint `main.ts`.
 - Database: single Mongoose connection in `src/db/mongo.ts`, models under `src/modules/<feature>/`.
 - Auth: `src/middleware/auth.middleware.ts` validates `Authorization: Bearer`,
-  `src/modules/auth/auth.service.ts` signs/verifies HS256 tokens via `jose`.
+  `src/modules/auth/auth.service.ts` signs/verifies HS256 tokens via `jose`; `src/modules/auth/`
+  also holds the User model, scrypt password hashing and register/login routes.
 - Global search: `src/modules/search/` provides authenticated `GET /api/search` across expenses and
   tasks.
 - Config: `src/config/env.ts` only; copy `.env.example` to `.env` locally.
-- Current scope: foundation phase; login/register, expense CRUD and task CRUD are stubs.
+- Current scope: login/register and global search work; expense CRUD and task CRUD are stubs.
 
 ## Expectations
 
