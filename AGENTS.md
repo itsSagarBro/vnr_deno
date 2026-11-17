@@ -13,8 +13,9 @@ Instructions for AI agents and contributors working in this repository.
 ## Current phase
 
 Hono app factory, env validation, Mongo connection, bearer middleware, token service, health check,
-authenticated global search and protected stubs exist. Registration and login are implemented with
-scrypt-hashed passwords. Expense CRUD and task CRUD remain intentionally `501 NOT_IMPLEMENTED`.
+authenticated global search and full user-scoped expense/task CRUD are implemented. Registration and
+login use scrypt-hashed passwords. CRUD uses client-generated ids (idempotent offline upserts),
+`updatedAfter` sync cursors and soft-delete `deletedAt` tombstones.
 
 ## Rules
 
@@ -43,6 +44,10 @@ scrypt-hashed passwords. Expense CRUD and task CRUD remain intentionally `501 NO
 12. Auth routes must hash with `hashPassword()` and compare with `verifyPassword()` from
     `src/modules/auth/password.service.ts`. Keep `UserService` injectable via
     `AppOptions.userService` so route tests do not need MongoDB.
+13. Keep validation and persistence in `expense.service.ts` / `task.service.ts`; handlers stay thin.
+    Inject `ExpenseService` and `TaskService` via `AppOptions` so route tests do not need MongoDB.
+    Upserts clear `deletedAt`; deletes set it (tombstones). Never hard-delete records — offline
+    clients rely on tombstones reaching other devices through the list endpoints.
 
 ## Commands
 

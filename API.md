@@ -33,12 +33,16 @@ Invalid, missing or expired tokens return `401`.
 | `POST`  | `/api/auth/register` | no   | implemented | Create account with email/password      |
 | `POST`  | `/api/auth/login`    | no   | implemented | Verify credentials, issue bearer token  |
 | `GET`   | `/api/auth/me`       | yes  | implemented | Return current user identity from token |
-| `GET`   | `/api/expenses`      | yes  | 501 stub    | List expenses for current user          |
-| `POST`  | `/api/expenses`      | yes  | 501 stub    | Create an expense                       |
-| `GET`   | `/api/tasks`         | yes  | 501 stub    | List tasks for current user             |
-| `POST`  | `/api/tasks`         | yes  | 501 stub    | Create a task                           |
-| `PATCH` | `/api/tasks/:id`     | yes  | 501 stub    | Update or complete a task               |
-| `GET`   | `/api/search`        | yes  | implemented | Search expenses and tasks globally      |
+| `GET`   | `/api/expenses`        | yes  | implemented | List expenses (incremental sync)        |
+| `PUT`   | `/api/expenses/:id`    | yes  | implemented | Idempotent upsert by client id          |
+| `POST`  | `/api/expenses`        | yes  | implemented | Create/upsert expense (id in body)      |
+| `DELETE`| `/api/expenses/:id`    | yes  | implemented | Soft-delete, leaves a tombstone         |
+| `GET`   | `/api/tasks`           | yes  | implemented | List tasks (incremental sync)           |
+| `PUT`   | `/api/tasks/:id`       | yes  | implemented | Idempotent upsert by client id          |
+| `POST`  | `/api/tasks`           | yes  | implemented | Create/upsert task (id in body)         |
+| `PATCH` | `/api/tasks/:id`       | yes  | implemented | Partial task update                     |
+| `DELETE`| `/api/tasks/:id`       | yes  | implemented | Soft-delete, leaves a tombstone         |
+| `GET`   | `/api/search`          | yes  | implemented | Search expenses and tasks globally      |
 
 ### GET /api/health
 
@@ -90,9 +94,16 @@ A wrong email or password returns `401 INVALID_CREDENTIALS`. Passwords are hashe
 the hash is stored. The Flutter client stores `token` in `flutter_secure_storage` and reads `user`
 into its domain `AppUser` entity.
 
-### Planned POST /api/expenses
+### Expenses
 
-Request (client-generated `id` supports idempotent offline retries):
+All expense endpoints are scoped to the authenticated user's `sub` claim. Client-generated ids make
+writes idempotent, so a retried offline upload updates the same record instead of duplicating it.
+
+#### PUT /api/expenses/:id  ·  POST /api/expenses
+
+The `PUT` path id takes the client id; `POST` reads the same `id` from the body. Both are upserts.
+
+Request body:
 
 ```json
 {
@@ -105,9 +116,35 @@ Request (client-generated `id` supports idempotent offline retries):
 }
 ```
 
-### Planned POST /api/tasks
+`title`, `amount` (> 0), `category` and a valid ISO `date` are required; `note` is optional. Response
+is the stored record including `id`, `createdAt`, `updatedAt` and `deletedAt: null`.
 
-Request (client-generated `id` supports idempotent offline retries):
+#### GET /api/expenses
+
+Query parameters:
+
+| Name           | Required | Default | Rules                                   |
+| -------------- | -------- | ------- | --------------------------------------- |
+| `updatedAfter` | no       | —       | ISO date cursor; returns records newer  |
+| `limit`        | no       | `200`   | Integer between 1 and 500               |
+
+```json
+{ "items": [ { "id": "9b1f...", "title": "Coffee", "updatedAt": "...", "deletedAt": null } ] }
+```
+
+Soft-deleted records appear as tombstones with a non-null `deletedAt` so other devices can remove
+their local copy.
+
+#### DELETE /api/expenses/:id
+
+Sets `deletedAt` rather than removing the row. Responds `{ "id": "...", "deleted": true }`; a second
+delete for the same record returns `404 NOT_FOUND`. A later `PUT` upsert clears the tombstone.
+
+### Tasks
+
+Task endpoints mirror expenses and use the same scoping, idempotency and sync semantics.
+
+#### PUT /api/tasks/:id  ·  POST /api/tasks
 
 ```json
 {
@@ -120,11 +157,23 @@ Request (client-generated `id` supports idempotent offline retries):
 }
 ```
 
-`category` is one of `Personal`, `Work`, `Travel`, `Food`, `Other` (default `Personal`). These
-values are shared with the Flutter client's `TaskCategory` enum.
+`title` is required. `category` is one of `Personal`, `Work`, `Travel`, `Food`, `Other` (default
+`Personal`) — shared with the Flutter client's `TaskCategory.wireValue`. `description` (also accepted
+as `note`), `dueDate` and `isCompleted` are optional.
 
-`PATCH /api/tasks/:id` will accept partial updates such as `{ "isCompleted": true }`. All task
-records are scoped to the authenticated user's `sub` claim.
+#### PATCH /api/tasks/:id
+
+Accepts partial updates such as `{ "isCompleted": true }` or `{ "title": "New title" }`. Only
+supplied fields change.
+
+#### GET /api/tasks
+
+Supports the same `updatedAfter` cursor and `limit` parameters as expenses and returns
+`{ "items": [...] }` with tombstones.
+
+#### DELETE /api/tasks/:id
+
+Soft-deletes the task, returning `{ "id": "...", "deleted": true }`.
 
 ### GET /api/search
 
@@ -170,10 +219,9 @@ newest-first across both collections.
 | `200` | Success                                          |
 | `400` | Validation failure                               |
 | `401` | Missing/invalid/expired token or bad credentials |
-| `404` | Unknown route                                    |
+| `404` | Unknown route or missing/deleted record          |
 | `409` | Conflict, e.g. email already registered          |
 | `500` | Unexpected server error                          |
-| `501` | Endpoint scaffolded but not implemented yet      |
 
 ## Error codes
 
@@ -185,5 +233,4 @@ newest-first across both collections.
 | `INVALID_CREDENTIALS`   | Wrong email or password         |
 | `CONFLICT`              | Email already registered        |
 | `NOT_FOUND`             | Route/resource not found        |
-| `NOT_IMPLEMENTED`       | Planned endpoint not built yet  |
 | `INTERNAL_SERVER_ERROR` | Unhandled server error          |

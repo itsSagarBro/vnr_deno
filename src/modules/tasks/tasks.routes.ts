@@ -1,26 +1,75 @@
 import { Hono, type MiddlewareHandler } from "hono";
 
-import { notImplemented } from "../../shared/http/http-error.ts";
+import { readBody } from "../../shared/http/read-body.ts";
 import type { AppEnv } from "../../types/app-env.ts";
+import {
+  mongoTaskService,
+  parseListLimit,
+  parseTaskInput,
+  parseTaskPatch,
+  type TaskService,
+  validateRecordId,
+} from "./task.service.ts";
 
-/// All task endpoints require a valid bearer token.
-export function taskRoutes(requireJwt: MiddlewareHandler<AppEnv>) {
+/// All task endpoints require a valid bearer token and are scoped to its sub.
+export function taskRoutes(
+  requireJwt: MiddlewareHandler<AppEnv>,
+  service: TaskService = mongoTaskService,
+) {
   const router = new Hono<AppEnv>();
   router.use("*", requireJwt);
 
-  // TODO(phase 2): list tasks scoped to c.get("auth").sub.
-  router.get("/", () => {
-    throw notImplemented("Listing tasks");
+  router.get("/", async (c) => {
+    const limit = parseListLimit(c.req.query("limit") ?? null);
+    const items = await service.list({
+      userId: c.get("auth").sub,
+      updatedAfter: c.req.query("updatedAfter") ?? undefined,
+      limit,
+    });
+    return c.json({ items });
   });
 
-  // TODO(phase 2): create a task with an idempotency key from the client.
-  router.post("/", () => {
-    throw notImplemented("Creating tasks");
+  router.put("/:id", async (c) => {
+    const id = validateRecordId(c.req.param("id"));
+    const input = parseTaskInput(await readBody(c));
+    const record = await service.upsert({
+      userId: c.get("auth").sub,
+      id,
+      input,
+    });
+    return c.json(record);
   });
 
-  // TODO(phase 2): patch a task owned by the authenticated user.
-  router.patch("/:id", () => {
-    throw notImplemented("Updating tasks");
+  router.post("/", async (c) => {
+    const body = await readBody(c);
+    const id = validateRecordId(body.id);
+    const input = parseTaskInput(body);
+    const record = await service.upsert({
+      userId: c.get("auth").sub,
+      id,
+      input,
+    });
+    return c.json(record);
+  });
+
+  router.patch("/:id", async (c) => {
+    const id = validateRecordId(c.req.param("id"));
+    const changes = parseTaskPatch(await readBody(c));
+    const record = await service.patch({
+      userId: c.get("auth").sub,
+      id,
+      changes,
+    });
+    return c.json(record);
+  });
+
+  router.delete("/:id", async (c) => {
+    const id = validateRecordId(c.req.param("id"));
+    const record = await service.softDelete({
+      userId: c.get("auth").sub,
+      id,
+    });
+    return c.json({ id: record.id, deleted: true });
   });
 
   return router;

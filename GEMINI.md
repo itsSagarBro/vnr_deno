@@ -12,9 +12,12 @@ source of truth for stack, structure and conventions.
   `src/modules/auth/auth.service.ts` signs/verifies HS256 tokens via `jose`; `src/modules/auth/`
   also holds the User model, scrypt password hashing and register/login routes.
 - Global search: `src/modules/search/` provides authenticated `GET /api/search` across expenses and
-  tasks.
+  tasks (excludes soft-deleted records).
+- CRUD + sync: `src/modules/expenses/` and `src/modules/tasks/` provide user-scoped CRUD with
+  client-generated ids, `updatedAfter` cursors and soft-delete tombstones. `ExpenseService` and
+  `TaskService` are injectable via `AppOptions`.
 - Config: `src/config/env.ts` only; copy `.env.example` to `.env` locally.
-- Current scope: login/register and global search work; expense CRUD and task CRUD are stubs.
+- Current scope: login/register, global search and expense/task CRUD all work offline-first.
 
 ## Expectations
 

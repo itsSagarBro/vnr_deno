@@ -6,7 +6,9 @@ import { errorHandler } from "./middleware/error.middleware.ts";
 import { requireAuth } from "./middleware/auth.middleware.ts";
 import { authRoutes } from "./modules/auth/auth.routes.ts";
 import { expenseRoutes } from "./modules/expenses/expenses.routes.ts";
+import type { ExpenseService } from "./modules/expenses/expense.service.ts";
 import { taskRoutes } from "./modules/tasks/tasks.routes.ts";
+import type { TaskService } from "./modules/tasks/task.service.ts";
 import { searchRoutes } from "./modules/search/search.routes.ts";
 import { globalSearch, type SearchService } from "./modules/search/search.service.ts";
 import type { UserService } from "./modules/auth/user.service.ts";
@@ -18,6 +20,8 @@ export interface AppOptions {
   corsOrigin?: string;
   searchService?: SearchService;
   userService?: UserService;
+  expenseService?: ExpenseService;
+  taskService?: TaskService;
 }
 
 /// Builds the Hono app without touching the network or database, which keeps
@@ -60,8 +64,8 @@ export function createApp(options: AppOptions) {
       userService: options.userService,
     }),
   );
-  app.route("/api/expenses", expenseRoutes(requireJwt));
-  app.route("/api/tasks", taskRoutes(requireJwt));
+  app.route("/api/expenses", expenseRoutes(requireJwt, options.expenseService));
+  app.route("/api/tasks", taskRoutes(requireJwt, options.taskService));
   app.route(
     "/api/search",
     searchRoutes(requireJwt, options.searchService ?? globalSearch),

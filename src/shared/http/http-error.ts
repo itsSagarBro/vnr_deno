@@ -24,6 +24,10 @@ export function conflict(message: string, details?: unknown): HttpError {
   return new HttpError(409, message, "CONFLICT", details);
 }
 
+export function notFound(message: string, details?: unknown): HttpError {
+  return new HttpError(404, message, "NOT_FOUND", details);
+}
+
 export function notImplemented(feature: string): HttpError {
   return new HttpError(
     501,

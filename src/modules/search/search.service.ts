@@ -51,6 +51,7 @@ export const globalSearch: SearchService = async (
   const [expenseRows, taskRows] = await Promise.all([
     ExpenseModel.find({
       userId,
+      deletedAt: null,
       $or: [{ title: pattern }, { category: pattern }, { note: pattern }],
     })
       .sort({ date: -1 })
@@ -58,6 +59,7 @@ export const globalSearch: SearchService = async (
       .lean(),
     TaskModel.find({
       userId,
+      deletedAt: null,
       $or: [{ title: pattern }, { description: pattern }],
     })
       .sort({ updatedAt: -1 })

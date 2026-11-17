@@ -5,8 +5,9 @@ Mongoose and MongoDB. Provides email/password authentication with HS256 bearer t
 foundation for expense and task endpoints.
 
 > **Status:** health checks, email/password registration and login, bearer-token validation, a
-> protected `/api/auth/me` route and authenticated global search work. Expense CRUD and task CRUD
-> are documented stubs returning `501 NOT_IMPLEMENTED`.
+> protected `/api/auth/me` route, authenticated global search and user-scoped expense/task CRUD
+> work. CRUD accepts client-generated ids, supports incremental sync cursors and soft-delete
+> tombstones for offline clients.
 
 ## Stack
 
@@ -84,8 +85,8 @@ src/
     error.middleware.ts         # JSON error envelope
   modules/
     auth/                       # User model, scrypt passwords, token service + routes
-    expenses/                   # Mongoose schema + protected routes
-    tasks/                      # Mongoose schema + protected routes
+    expenses/                   # Mongoose schema, sync service + CRUD routes
+    tasks/                      # Mongoose schema, sync service + CRUD routes
     search/                     # global search across expenses + tasks
   shared/http/http-error.ts     # typed HTTP errors
   types/app-env.ts              # Hono context typings
@@ -115,7 +116,24 @@ curl -H "Authorization: Bearer <token>" \
   "http://localhost:8000/api/search?q=coffee&limit=20"
 ```
 
-Search is scoped to the authenticated user and merges expenses and tasks newest-first.
+Search is scoped to the authenticated user and merges expenses and tasks newest-first. Deleted
+records are excluded.
+
+### Offline sync
+
+```bash
+curl -X PUT http://localhost:8000/api/expenses/<client-uuid> \
+  -H "Authorization: Bearer <token>" -H 'Content-Type: application/json' \
+  -d '{"title":"Coffee","amount":250,"category":"Food","date":"2026-11-17T09:30:00.000Z"}'
+
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/expenses?updatedAfter=2026-11-17T00:00:00.000Z&limit=200"
+```
+
+`PUT /api/expenses/:id` and `PUT /api/tasks/:id` are idempotent upserts keyed by the client id.
+`GET` accepts an `updatedAfter` cursor and returns tombstones for soft-deleted records. `DELETE`
+sets `deletedAt`; `PATCH /api/tasks/:id` supports partial task updates. All records are scoped to
+the token's `sub`.
 
 ### Task categories
 
@@ -127,11 +145,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) and [API.md](API.md) for details.
 
 ## Next phase
 
-1. Add `POST /api/auth/register` and `POST /api/auth/login` with password hashing and a User model.
-2. Implement expense CRUD scoped to the authenticated user.
-3. Implement task CRUD scoped to the authenticated user.
-4. Add refresh tokens and a token revocation strategy if needed.
-5. Add request validation and rate limiting on auth routes.
+1. Add refresh tokens and a token revocation strategy if needed.
+2. Add request validation and rate limiting on auth routes.
+3. Add an outbox-friendly batch endpoint for large offline queues.
+4. Add a real MongoDB fixture for sync route tests.
 
 ## Related documents
 

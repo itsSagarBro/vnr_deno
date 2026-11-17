@@ -35,15 +35,18 @@ src/
       user.model.ts           Mongoose User schema (passwordHash only)
       user.service.ts         injectable user lookup/creation
     expenses/
-      expense.model.ts        Mongoose schema
-      expenses.routes.ts      protected CRUD stubs
+      expense.model.ts        Mongoose schema (String _id, userId, deletedAt)
+      expense.service.ts      validation + injectable Mongo upsert/list/soft-delete
+      expenses.routes.ts      protected CRUD + sync routes
     tasks/
       task.model.ts           Mongoose schema + TASK_CATEGORIES enum
-      tasks.routes.ts         protected CRUD stubs
+      task.service.ts         validation + injectable Mongo upsert/patch/list/soft-delete
+      tasks.routes.ts         protected CRUD + sync routes
     search/
       search.service.ts       escaped-regex search over both models
       search.routes.ts        protected GET /api/search
-  shared/http/http-error.ts   HttpError + notImplemented helpers
+  shared/http/http-error.ts   HttpError + badRequest/notFound/... helpers
+  shared/http/read-body.ts    shared JSON object body reader
   types/app-env.ts            Hono environment typings
 ```
 
@@ -59,10 +62,12 @@ src/
 - Mongoose models live next to their feature. Reuse `mongoose.models.X` on watch reloads.
 - Route handlers are thin: validation, persistence and side effects move into service/module files
   as features grow.
-- `SearchService` is injected into `searchRoutes` via `AppOptions.searchService`, so tests can
-  validate the endpoint without a MongoDB fixture.
+- `SearchService`, `UserService`, `ExpenseService` and `TaskService` are injected through
+  `AppOptions`, so route tests use fast in-memory fakes and never need MongoDB.
 - Task categories are a shared contract: `TASK_CATEGORIES` in `task.model.ts` defines the Mongoose
   enum and must match the Flutter `TaskCategory.wireValue` labels.
+- CRUD handlers stay thin: validation lives in `*.service.ts` (`parseExpenseInput`, `parseTaskInput`,
+  `parseTaskPatch`), persistence in the `mongo*Service` implementations.
 
 ## Authentication design
 
@@ -80,16 +85,21 @@ src/
   protected request.
 - Never store or log plaintext passwords; only the scrypt hash from `password.service.ts`.
 
-## Offline-first considerations
+## Offline-first sync
 
-- Expense and task creates must accept a client-generated idempotency key/uuid so retries from the
-  Flutter outbox cannot duplicate records.
-- Each expense/task is scoped by `userId` from the verified token; never trust a user id supplied in
-  a request body.
-- Include `updatedAt` (Mongoose timestamps) in responses so the client can reconcile local records.
-- Design list endpoints for incremental sync (`updatedAt.gt` cursor, pagination) rather than only
-  full snapshots.
-- Global search currently queries MongoDB directly; local caching of search hits comes with sync.
+- Expense/task upserts use the client-generated UUID as `_id`, so retries from the Flutter outbox are
+  idempotent (a replay overwrites the same record instead of duplicating it).
+- Each record is scoped by `userId` from the verified token's `sub`; a user id in a request body is
+  never trusted.
+- Mongoose `timestamps` provide `createdAt`/`updatedAt`, returned on every record so the client can
+  reconcile local state and advance its cursor.
+- `GET /api/expenses` and `GET /api/tasks` accept `updatedAfter` (an ISO cursor) and `limit` for
+  incremental, paged pulls. Deletes are soft (`deletedAt`); tombstones are included in list results
+  so other devices can remove local copies.
+- A tombstone can be resurrected by a later `PUT` upsert (which clears `deletedAt`), which is how
+  the Flutter Undo action restores a deleted record.
+- Global search queries MongoDB directly and excludes soft-deleted records; search hits are not yet
+  cached locally.
 
 ## Testing
 
