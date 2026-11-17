@@ -1,12 +1,12 @@
 # E Track API (Deno)
 
-Backend for the E Track offline-first expense tracker. Built with Deno 2, Hono, Mongoose and
-MongoDB. Provides email/password authentication with HS256 bearer tokens and the foundation for
-expense endpoints.
+Backend for the E Track offline-first expense **and task** tracker. Built with Deno 2, Hono,
+Mongoose and MongoDB. Provides email/password authentication with HS256 bearer tokens and the
+foundation for expense and task endpoints.
 
-> **Status:** foundation phase. Health checks, bearer-token validation and a protected
-> `/api/auth/me` route work. Login/register and expense CRUD are documented stubs returning
-> `501 NOT_IMPLEMENTED`.
+> **Status:** foundation phase. Health checks, bearer-token validation, a protected `/api/auth/me`
+> route and authenticated global search work. Login/register, expense CRUD and task CRUD are
+> documented stubs returning `501 NOT_IMPLEMENTED`.
 
 ## Stack
 
@@ -49,7 +49,7 @@ The server listens on `PORT` (default `8000`). Check it with:
 curl http://localhost:8000/api/health
 ```
 
-## Tasks
+## Deno tasks
 
 ```bash
 deno task check   # type-check entrypoint + tests
@@ -85,10 +85,27 @@ src/
   modules/
     auth/                       # token service + auth routes
     expenses/                   # Mongoose schema + protected routes
+    tasks/                      # Mongoose schema + protected routes
+    search/                     # global search across expenses + tasks
   shared/http/http-error.ts     # typed HTTP errors
   types/app-env.ts              # Hono context typings
 main_test.ts                    # health/auth/404 tests
 ```
+
+### Global search
+
+```bash
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/search?q=coffee&limit=20"
+```
+
+Search is scoped to the authenticated user and merges expenses and tasks newest-first.
+
+### Task categories
+
+Tasks support a `category` field with these values: `Personal`, `Work`, `Travel`, `Food`, `Other`
+(default `Personal`). The same list is exported as `TASK_CATEGORIES` from
+`src/modules/tasks/task.model.ts` and mirrored by the Flutter `TaskCategory` enum.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) and [API.md](API.md) for details.
 
@@ -96,8 +113,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) and [API.md](API.md) for details.
 
 1. Add `POST /api/auth/register` and `POST /api/auth/login` with password hashing and a User model.
 2. Implement expense CRUD scoped to the authenticated user.
-3. Add refresh tokens and a token revocation strategy if needed.
-4. Add request validation and rate limiting on auth routes.
+3. Implement task CRUD scoped to the authenticated user.
+4. Add refresh tokens and a token revocation strategy if needed.
+5. Add request validation and rate limiting on auth routes.
 
 ## Related documents
 

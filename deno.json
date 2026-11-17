@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "exports": "./main.ts",
   "tasks": {
-    "dev": "deno run --watch --allow-net --allow-env --allow-read main.ts",
+    "dev": "deno run --watch -A --env-file main.ts",
     "start": "deno run --allow-net --allow-env --allow-read main.ts",
     "check": "deno check main.ts main_test.ts",
     "test": "deno test --allow-env --allow-read",

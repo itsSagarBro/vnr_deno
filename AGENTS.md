@@ -4,7 +4,7 @@ Instructions for AI agents and contributors working in this repository.
 
 ## Project
 
-- Service name: **E Track API** (backend for the E Track expense tracker).
+- Service name: **E Track API** (backend for the E Track expense **and task** tracker).
 - Deno project name: `e-track-api`. Do not rename folders; the path is fixed by the project owner
   (`D:\Sagar\Deno\vnr_deno`).
 - Stack: Deno 2.9, Hono 4, Mongoose 9 + MongoDB, jose 6 (HS256 JWT), @std/dotenv, @std/assert.
@@ -13,8 +13,8 @@ Instructions for AI agents and contributors working in this repository.
 ## Current phase
 
 Foundation only. Hono app factory, env validation, Mongo connection, bearer middleware, token
-service, health check and protected stubs exist. Login, registration and expense CRUD are
-intentionally `501 NOT_IMPLEMENTED`.
+service, health check, authenticated global search and protected stubs exist. Login, registration,
+expense CRUD and task CRUD are intentionally `501 NOT_IMPLEMENTED`.
 
 ## Rules
 
@@ -32,12 +32,14 @@ intentionally `501 NOT_IMPLEMENTED`.
    `deno task dev` watch reloads.
 7. Never log or commit secrets, `.env`, tokens or plaintext passwords. Password hashing is mandatory
    when auth endpoints are implemented.
-8. Expense records must be scoped by the authenticated user's `sub`. Accept a client-generated id
-   for idempotent offline sync.
+8. Expense and task records must be scoped by the authenticated user's `sub`. Accept a
+   client-generated id for idempotent offline sync.
 9. Update `README.md`, `ARCHITECTURE.md` and `API.md` when routes, modules or behavior change.
    `GEMINI.md` references this file; keep it aligned.
 10. Prefer small, focused files and explicit TypeScript types. No `any` unless unavoidable with
     third-party typings.
+11. Global search must stay scoped to `c.get("auth").sub` and escape regex input. Keep it injectable
+    via `AppOptions.searchService` so route tests do not need MongoDB.
 
 ## Commands
 

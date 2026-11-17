@@ -10,8 +10,10 @@ source of truth for stack, structure and conventions.
 - Database: single Mongoose connection in `src/db/mongo.ts`, models under `src/modules/<feature>/`.
 - Auth: `src/middleware/auth.middleware.ts` validates `Authorization: Bearer`,
   `src/modules/auth/auth.service.ts` signs/verifies HS256 tokens via `jose`.
+- Global search: `src/modules/search/` provides authenticated `GET /api/search` across expenses and
+  tasks.
 - Config: `src/config/env.ts` only; copy `.env.example` to `.env` locally.
-- Current scope: foundation phase; login/register and expense CRUD are stubs.
+- Current scope: foundation phase; login/register, expense CRUD and task CRUD are stubs.
 
 ## Expectations
 

@@ -12,6 +12,10 @@ export class HttpError extends Error {
   }
 }
 
+export function badRequest(message: string, details?: unknown): HttpError {
+  return new HttpError(400, message, "VALIDATION_ERROR", details);
+}
+
 export function notImplemented(feature: string): HttpError {
   return new HttpError(
     501,
